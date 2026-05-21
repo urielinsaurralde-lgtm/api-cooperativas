@@ -1,27 +1,15 @@
 require("dotenv").config();
 
-const express    = require("express");
-const mysql      = require("mysql2");
-const cors       = require("cors");
-const multer     = require("multer");
-const cloudinary = require("cloudinary").v2;
-const fs         = require("fs");
+const express = require("express");
+const mysql   = require("mysql2");
+const cors    = require("cors");
 
-const app    = express();
-const upload = multer({ dest: "uploads/" });
+const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
-
-/* ════════════════════════════════════════════
-   CLOUDINARY
-════════════════════════════════════════════ */
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_NAME,
-  api_key:    process.env.CLOUDINARY_KEY,
-  api_secret: process.env.CLOUDINARY_SECRET
-});
 
 /* ════════════════════════════════════════════
    MYSQL — CleverCloud
@@ -66,7 +54,6 @@ db.getConnection((err, conn) => {
      observaciones       TEXT,
      lat                 DECIMAL(10,7),
      lng                 DECIMAL(10,7),
-     foto                TEXT,
      fecha               VARCHAR(50),
      operador_id         INT,
      FOREIGN KEY (operador_id) REFERENCES operadores(id)
@@ -86,11 +73,7 @@ function asegurarOperador(nombre, email, callback) {
   `;
   db.query(sql, [nombre, email], (err, result) => {
     if (err) return callback(err);
-
-    // Si hubo INSERT real, insertId tiene el nuevo id
     if (result.insertId) return callback(null, result.insertId);
-
-    // Si fue UPDATE (ON DUPLICATE), buscamos el id existente
     db.query("SELECT id FROM operadores WHERE email = ?", [email], (err2, rows) => {
       if (err2) return callback(err2);
       callback(null, rows[0].id);
@@ -112,74 +95,48 @@ app.post("/registrar-operador", (req, res) => {
 /* ════════════════════════════════════════════
    POST /guardar-cooperativa
 ════════════════════════════════════════════ */
-app.post("/guardar-cooperativa", upload.single("foto"), async (req, res) => {
-  try {
-    const data = req.body;
+app.post("/guardar-cooperativa", (req, res) => {
+  const data = req.body;
 
-    const fecha = new Date().toLocaleString("es-AR", {
-      timeZone: "America/Argentina/Buenos_Aires"
+  const fecha = new Date().toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires"
+  });
+
+  asegurarOperador(data.operador_nombre, data.operador_email, (err, operador_id) => {
+    if (err) { console.log("❌ ERROR OPERADOR:", err); return res.status(500).send("Error DB"); }
+
+    const sql = `
+      INSERT INTO cooperativas
+        (nombre_coop, matricula, cuit, direccion, tipo, estado,
+         referente_nombre, referente_tel, referente_email,
+         cantidad_asociados, rubro, observaciones,
+         lat, lng, fecha, operador_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    db.query(sql, [
+      data.nombre_coop,
+      data.matricula         || null,
+      data.cuit              || null,
+      data.direccion         || null,
+      data.tipo              || null,
+      data.estado            || null,
+      data.referente_nombre  || null,
+      data.referente_tel     || null,
+      data.referente_email   || null,
+      data.cantidad_asociados ? parseInt(data.cantidad_asociados) : null,
+      data.rubro             || null,
+      data.observaciones     || null,
+      parseFloat(data.lat),
+      parseFloat(data.lng),
+      fecha,
+      operador_id
+    ], (err2) => {
+      if (err2) { console.log("❌ DB ERROR COOP:", err2); return res.status(500).send("Error DB"); }
+      console.log("✅ Cooperativa guardada:", data.nombre_coop);
+      res.send("OK");
     });
-
-    // ── Subir foto a Cloudinary ──────────────────
-    let fotoUrl = null;
-    if (req.file) {
-      try {
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: "cooperativas",
-          transformation: [
-            { width: 1600, height: 1600, crop: "limit" },
-            { quality: "auto" }
-          ]
-        });
-        fotoUrl = result.secure_url;
-        fs.unlinkSync(req.file.path);
-      } catch (err) {
-        console.log("❌ ERROR CLOUDINARY:", err);
-      }
-    }
-
-    // ── Asegurar operador y luego insertar ───────
-    asegurarOperador(data.operador_nombre, data.operador_email, (err, operador_id) => {
-      if (err) { console.log("❌ ERROR OPERADOR:", err); return res.status(500).send("Error DB"); }
-
-      const sql = `
-        INSERT INTO cooperativas
-          (nombre_coop, matricula, cuit, direccion, tipo, estado,
-           referente_nombre, referente_tel, referente_email,
-           cantidad_asociados, rubro, observaciones,
-           lat, lng, foto, fecha, operador_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      db.query(sql, [
-        data.nombre_coop,
-        data.matricula         || null,
-        data.cuit              || null,
-        data.direccion         || null,
-        data.tipo              || null,
-        data.estado            || null,
-        data.referente_nombre  || null,
-        data.referente_tel     || null,
-        data.referente_email   || null,
-        data.cantidad_asociados ? parseInt(data.cantidad_asociados) : null,
-        data.rubro             || null,
-        data.observaciones     || null,
-        parseFloat(data.lat),
-        parseFloat(data.lng),
-        fotoUrl,
-        fecha,
-        operador_id
-      ], (err2) => {
-        if (err2) { console.log("❌ DB ERROR COOP:", err2); return res.status(500).send("Error DB"); }
-        console.log("✅ Cooperativa guardada:", data.nombre_coop);
-        res.send("OK");
-      });
-    });
-
-  } catch (e) {
-    console.log("❌ ERROR GENERAL:", e);
-    res.status(500).send("Error servidor");
-  }
+  });
 });
 
 /* ════════════════════════════════════════════
@@ -216,7 +173,7 @@ app.get("/cooperativas/:id", (req, res) => {
 });
 
 /* ════════════════════════════════════════════
-   GET /operadores  (lista de operadores)
+   GET /operadores
 ════════════════════════════════════════════ */
 app.get("/operadores", (req, res) => {
   db.query("SELECT * FROM operadores ORDER BY id DESC", (err, results) => {
@@ -226,7 +183,7 @@ app.get("/operadores", (req, res) => {
 });
 
 /* ════════════════════════════════════════════
-   GET /health  (para monitoreo en Render)
+   GET /health
 ════════════════════════════════════════════ */
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date().toISOString() }));
 
