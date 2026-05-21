@@ -127,8 +127,8 @@ app.post("/guardar-cooperativa", (req, res) => {
       data.cantidad_asociados ? parseInt(data.cantidad_asociados) : null,
       data.rubro             || null,
       data.observaciones     || null,
-      parseFloat(data.lat),
-      parseFloat(data.lng),
+      isNaN(parseFloat(data.lat)) ? null : parseFloat(data.lat),
+      isNaN(parseFloat(data.lng)) ? null : parseFloat(data.lng),
       fecha,
       operador_id
     ], (err2) => {
