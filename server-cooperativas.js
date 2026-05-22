@@ -3,12 +3,14 @@ require("dotenv").config();
 const express = require("express");
 const mysql   = require("mysql2");
 const cors    = require("cors");
+const multer  = require("multer");
+const upload  = multer();
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
 app.use(express.static("public"));
 
 /* ════════════════════════════════════════════
@@ -95,7 +97,7 @@ app.post("/registrar-operador", (req, res) => {
 /* ════════════════════════════════════════════
    POST /guardar-cooperativa
 ════════════════════════════════════════════ */
-app.post("/guardar-cooperativa", (req, res) => {
+app.post("/guardar-cooperativa", upload.none(), (req, res) => {
   const data = req.body;
 
   const fecha = new Date().toLocaleString("es-AR", {
@@ -127,8 +129,8 @@ app.post("/guardar-cooperativa", (req, res) => {
       data.cantidad_asociados ? parseInt(data.cantidad_asociados) : null,
       data.rubro             || null,
       data.observaciones     || null,
-      isNaN(parseFloat(data.lat)) ? null : parseFloat(data.lat),
-      isNaN(parseFloat(data.lng)) ? null : parseFloat(data.lng),
+      parseFloat(data.lat),
+      parseFloat(data.lng),
       fecha,
       operador_id
     ], (err2) => {
