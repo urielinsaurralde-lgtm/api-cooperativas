@@ -174,6 +174,42 @@ app.get("/cooperativas/:id", (req, res) => {
 });
 
 /* ════════════════════════════════════════════
+   PUT /cooperativas/:id  (editar)
+════════════════════════════════════════════ */
+app.put("/cooperativas/:id", (req, res) => {
+  const data = req.body;
+  const sql = `
+    UPDATE cooperativas SET
+      nombre_coop = ?, matricula = ?, cuit = ?, direccion = ?,
+      tipo = ?, estado = ?, referente_nombre = ?, referente_tel = ?,
+      referente_email = ?, cantidad_asociados = ?, rubro = ?, observaciones = ?
+    WHERE id = ?
+  `;
+  db.query(sql, [
+    data.nombre_coop, data.matricula || null, data.cuit || null,
+    data.direccion || null, data.tipo || null, data.estado || null,
+    data.referente_nombre || null, data.referente_tel || null,
+    data.referente_email || null,
+    data.cantidad_asociados ? parseInt(data.cantidad_asociados) : null,
+    data.rubro || null, data.observaciones || null,
+    req.params.id
+  ], (err) => {
+    if (err) { console.log("❌ ERROR PUT COOP:", err); return res.status(500).send("Error DB"); }
+    res.send("OK");
+  });
+});
+
+/* ════════════════════════════════════════════
+   DELETE /cooperativas/:id  (eliminar)
+════════════════════════════════════════════ */
+app.delete("/cooperativas/:id", (req, res) => {
+  db.query("DELETE FROM cooperativas WHERE id = ?", [req.params.id], (err) => {
+    if (err) { console.log("❌ ERROR DELETE COOP:", err); return res.status(500).send("Error DB"); }
+    res.send("OK");
+  });
+});
+
+/* ════════════════════════════════════════════
    GET /operadores
 ════════════════════════════════════════════ */
 app.get("/operadores", (req, res) => {
