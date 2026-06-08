@@ -11,9 +11,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-
 /* ════════════════════════════════════════════
-   MYSQL — CleverCloud
+   MYSQL
 ════════════════════════════════════════════ */
 const db = mysql.createPool({
   host:     process.env.DB_HOST,
@@ -29,53 +28,18 @@ db.getConnection((err, conn) => {
 });
 
 /* ════════════════════════════════════════════
-   SQL DE CREACIÓN DE TABLAS
-   (ejecutar 1 vez en tu base de datos)
-
-   CREATE TABLE IF NOT EXISTS operadores (
-     id     INT AUTO_INCREMENT PRIMARY KEY,
-     nombre VARCHAR(150),
-     email  VARCHAR(150),
-     UNIQUE KEY uniq_email (email)
-   );
-
-   CREATE TABLE IF NOT EXISTS cooperativas (
-     id                  INT AUTO_INCREMENT PRIMARY KEY,
-     nombre_coop         VARCHAR(200) NOT NULL,
-     matricula           VARCHAR(100),
-     cuit                VARCHAR(20),
-     direccion           VARCHAR(250),
-     tipo                VARCHAR(150),
-     estado              VARCHAR(50),
-     referente_nombre    VARCHAR(150),
-     referente_tel       VARCHAR(50),
-     referente_email     VARCHAR(150),
-     cantidad_asociados  INT,
-     rubro               VARCHAR(200),
-     observaciones       TEXT,
-     lat                 DECIMAL(10,7),
-     lng                 DECIMAL(10,7),
-     fecha               VARCHAR(50),
-     operador_id         INT,
-     FOREIGN KEY (operador_id) REFERENCES operadores(id)
-   );
-
-════════════════════════════════════════════ */
-
-
-/* ════════════════════════════════════════════
    HELPER: asegurar que el operador existe
 ════════════════════════════════════════════ */
 function asegurarOperador(nombre, email, callback) {
   const sql = `
-    INSERT INTO operadores (nombre, email)
+    INSERT INTO coop_operadores (nombre, email)
     VALUES (?, ?)
     ON DUPLICATE KEY UPDATE nombre = VALUES(nombre)
   `;
   db.query(sql, [nombre, email], (err, result) => {
     if (err) return callback(err);
     if (result.insertId) return callback(null, result.insertId);
-    db.query("SELECT id FROM operadores WHERE email = ?", [email], (err2, rows) => {
+    db.query("SELECT id FROM coop_operadores WHERE email = ?", [email], (err2, rows) => {
       if (err2) return callback(err2);
       callback(null, rows[0].id);
     });
@@ -107,7 +71,7 @@ app.post("/guardar-cooperativa", upload.none(), (req, res) => {
     if (err) { console.log("❌ ERROR OPERADOR:", err); return res.status(500).send("Error DB"); }
 
     const sql = `
-      INSERT INTO cooperativas
+      INSERT INTO coop_datos
         (nombre_coop, matricula, cuit, direccion, tipo, estado,
          referente_nombre, referente_tel, referente_email,
          cantidad_asociados, rubro, observaciones,
@@ -146,8 +110,8 @@ app.post("/guardar-cooperativa", upload.none(), (req, res) => {
 app.get("/cooperativas", (req, res) => {
   const sql = `
     SELECT c.*, o.nombre AS operador_nombre
-    FROM cooperativas c
-    LEFT JOIN operadores o ON c.operador_id = o.id
+    FROM coop_datos c
+    LEFT JOIN coop_operadores o ON c.operador_id = o.id
     ORDER BY c.id DESC
   `;
   db.query(sql, (err, results) => {
@@ -162,8 +126,8 @@ app.get("/cooperativas", (req, res) => {
 app.get("/cooperativas/:id", (req, res) => {
   const sql = `
     SELECT c.*, o.nombre AS operador_nombre
-    FROM cooperativas c
-    LEFT JOIN operadores o ON c.operador_id = o.id
+    FROM coop_datos c
+    LEFT JOIN coop_operadores o ON c.operador_id = o.id
     WHERE c.id = ?
   `;
   db.query(sql, [req.params.id], (err, results) => {
@@ -179,7 +143,7 @@ app.get("/cooperativas/:id", (req, res) => {
 app.put("/cooperativas/:id", (req, res) => {
   const data = req.body;
   const sql = `
-    UPDATE cooperativas SET
+    UPDATE coop_datos SET
       nombre_coop = ?, matricula = ?, cuit = ?, direccion = ?,
       tipo = ?, estado = ?, referente_nombre = ?, referente_tel = ?,
       referente_email = ?, cantidad_asociados = ?, rubro = ?, observaciones = ?
@@ -203,7 +167,7 @@ app.put("/cooperativas/:id", (req, res) => {
    DELETE /cooperativas/:id  (eliminar)
 ════════════════════════════════════════════ */
 app.delete("/cooperativas/:id", (req, res) => {
-  db.query("DELETE FROM cooperativas WHERE id = ?", [req.params.id], (err) => {
+  db.query("DELETE FROM coop_datos WHERE id = ?", [req.params.id], (err) => {
     if (err) { console.log("❌ ERROR DELETE COOP:", err); return res.status(500).send("Error DB"); }
     res.send("OK");
   });
@@ -213,7 +177,7 @@ app.delete("/cooperativas/:id", (req, res) => {
    GET /operadores
 ════════════════════════════════════════════ */
 app.get("/operadores", (req, res) => {
-  db.query("SELECT * FROM operadores ORDER BY id DESC", (err, results) => {
+  db.query("SELECT * FROM coop_operadores ORDER BY id DESC", (err, results) => {
     if (err) { console.log("❌ ERROR GET OPS:", err); return res.status(500).send("Error DB"); }
     res.json(results);
   });
