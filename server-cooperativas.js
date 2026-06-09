@@ -72,26 +72,30 @@ app.post("/guardar-cooperativa", upload.none(), (req, res) => {
 
     const sql = `
       INSERT INTO coop_datos
-        (nombre_coop, matricula, cuit, direccion, tipo, estado,
+        (nombre_coop, matricula_provincial, matricula_nacional, cuit, direccion,
+         codigo_postal, departamento, localidad, tipo, estado,
          referente_nombre, referente_tel, referente_email,
-         cantidad_asociados, rubro, observaciones,
+         cantidad_asociados, observaciones,
          lat, lng, fecha, operador_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.query(sql, [
       data.nombre_coop,
-      data.matricula         || null,
-      data.cuit              || null,
-      data.direccion         || null,
-      data.tipo              || null,
-      data.estado            || null,
-      data.referente_nombre  || null,
-      data.referente_tel     || null,
-      data.referente_email   || null,
+      data.matricula_provincial  || null,
+      data.matricula_nacional    || null,
+      data.cuit                  || null,
+      data.direccion             || null,
+      data.codigo_postal         || null,
+      data.departamento          || null,
+      data.localidad             || null,
+      data.tipo                  || null,
+      data.estado                || null,
+      data.referente_nombre      || null,
+      data.referente_tel         || null,
+      data.referente_email       || null,
       data.cantidad_asociados ? parseInt(data.cantidad_asociados) : null,
-      data.rubro             || null,
-      data.observaciones     || null,
+      data.observaciones         || null,
       parseFloat(data.lat),
       parseFloat(data.lng),
       fecha,
@@ -144,18 +148,22 @@ app.put("/cooperativas/:id", (req, res) => {
   const data = req.body;
   const sql = `
     UPDATE coop_datos SET
-      nombre_coop = ?, matricula = ?, cuit = ?, direccion = ?,
+      nombre_coop = ?, matricula_provincial = ?, matricula_nacional = ?,
+      cuit = ?, direccion = ?, codigo_postal = ?, departamento = ?, localidad = ?,
       tipo = ?, estado = ?, referente_nombre = ?, referente_tel = ?,
-      referente_email = ?, cantidad_asociados = ?, rubro = ?, observaciones = ?
+      referente_email = ?, cantidad_asociados = ?, observaciones = ?
     WHERE id = ?
   `;
   db.query(sql, [
-    data.nombre_coop, data.matricula || null, data.cuit || null,
-    data.direccion || null, data.tipo || null, data.estado || null,
+    data.nombre_coop,
+    data.matricula_provincial || null, data.matricula_nacional || null,
+    data.cuit || null, data.direccion || null,
+    data.codigo_postal || null, data.departamento || null, data.localidad || null,
+    data.tipo || null, data.estado || null,
     data.referente_nombre || null, data.referente_tel || null,
     data.referente_email || null,
     data.cantidad_asociados ? parseInt(data.cantidad_asociados) : null,
-    data.rubro || null, data.observaciones || null,
+    data.observaciones || null,
     req.params.id
   ], (err) => {
     if (err) { console.log("❌ ERROR PUT COOP:", err); return res.status(500).send("Error DB"); }
