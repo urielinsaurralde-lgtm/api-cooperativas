@@ -63,6 +63,10 @@ app.post("/registrar-operador", (req, res) => {
 app.post("/guardar-cooperativa", upload.none(), (req, res) => {
   const data = req.body;
 
+  const fecha = new Date().toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires"
+  });
+
   asegurarOperador(data.operador_nombre, data.operador_email, (err, operador_id) => {
     if (err) { console.log("❌ ERROR OPERADOR:", err); return res.status(500).send("Error DB"); }
 
@@ -71,9 +75,9 @@ app.post("/guardar-cooperativa", upload.none(), (req, res) => {
         (nombre_coop, matricula_provincial, matricula_nacional, cuit, direccion,
          codigo_postal, departamento, localidad, tipo, estado,
          referente_nombre, referente_tel, referente_email,
-         cantidad_asociados, observaciones,
-         lat, lng, operador_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         cantidad_asociados, observaciones, foto_url,
+         lat, lng, fecha, operador_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.query(sql, [
@@ -92,8 +96,10 @@ app.post("/guardar-cooperativa", upload.none(), (req, res) => {
       data.referente_email       || null,
       data.cantidad_asociados ? parseInt(data.cantidad_asociados) : null,
       data.observaciones         || null,
+      data.foto_url              || null,
       parseFloat(data.lat),
       parseFloat(data.lng),
+      fecha,
       operador_id
     ], (err2) => {
       if (err2) { console.log("❌ DB ERROR COOP:", err2); return res.status(500).send("Error DB"); }
