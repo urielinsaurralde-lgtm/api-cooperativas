@@ -59,13 +59,10 @@ app.post("/registrar-operador", (req, res) => {
 
 /* ════════════════════════════════════════════
    POST /guardar-cooperativa
+   La fecha la pone MySQL automáticamente
 ════════════════════════════════════════════ */
 app.post("/guardar-cooperativa", upload.none(), (req, res) => {
   const data = req.body;
-
-  const fecha = new Date().toLocaleString("es-AR", {
-    timeZone: "America/Argentina/Buenos_Aires"
-  });
 
   asegurarOperador(data.operador_nombre, data.operador_email, (err, operador_id) => {
     if (err) { console.log("❌ ERROR OPERADOR:", err); return res.status(500).send("Error DB"); }
@@ -76,8 +73,8 @@ app.post("/guardar-cooperativa", upload.none(), (req, res) => {
          codigo_postal, departamento, localidad, tipo, estado,
          referente_nombre, referente_tel, referente_email,
          cantidad_asociados, observaciones, foto_url,
-         lat, lng, fecha, operador_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         lat, lng, operador_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.query(sql, [
@@ -99,7 +96,6 @@ app.post("/guardar-cooperativa", upload.none(), (req, res) => {
       data.foto_url              || null,
       parseFloat(data.lat),
       parseFloat(data.lng),
-      fecha,
       operador_id
     ], (err2) => {
       if (err2) { console.log("❌ DB ERROR COOP:", err2); return res.status(500).send("Error DB"); }
